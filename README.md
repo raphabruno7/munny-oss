@@ -1,4 +1,4 @@
-# mony
+# munny
 
 Agregador pessoal de gastos: liga-se a contas bancárias via **Enable Banking**
 (PSD2), guarda o histórico de transações em SQLite, categoriza-as (regras +
