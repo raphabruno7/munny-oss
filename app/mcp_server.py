@@ -1,6 +1,6 @@
 from mcp.server.mcpserver import MCPServer
 
-from app import db
+from app import db, insights
 from app.config import ENABLE_BANKING_ASPSPS
 
 mcp = MCPServer("trocado")
@@ -57,3 +57,37 @@ def connection_status() -> dict:
             conn_row = db.get_bank_connection(conn, "enable_banking", aspsp_key)
             status[aspsp_key] = dict(conn_row) if conn_row else {"status": "not_connected"}
         return status
+
+
+@mcp.tool()
+def weekly_summary(week_start: str | None = None) -> dict:
+    """Resumo de gastos de uma semana (segunda a domingo). Sem `week_start`, usa a última
+    semana completa. Inclui total, por categoria, e comparação com a semana anterior e a
+    média das 4 semanas anteriores."""
+    with db.get_conn() as conn:
+        return insights.weekly_summary(conn, week_start)
+
+
+@mcp.tool()
+def recurring_payments() -> list[dict]:
+    """Pagamentos que se repetem quase todos os meses com valor parecido (subscrições,
+    débitos fixos), com o equivalente mensal."""
+    with db.get_conn() as conn:
+        return insights.detect_recurring(conn)
+
+
+@mcp.tool()
+def upcoming_obligations(horizon_months: int = 6) -> list[dict]:
+    """Obrigações sazonais que vencem nos próximos meses (IUC, seguro, IRS...) e quanto
+    pôr de lado por mês até lá."""
+    with db.get_conn() as conn:
+        return insights.upcoming_obligations(conn, horizon_months)
+
+
+@mcp.tool()
+def save_weekly_report(week_start: str, body_md: str) -> dict:
+    """Guarda o texto (markdown) do relatório semanal da semana que começa em `week_start`
+    (YYYY-MM-DD, segunda-feira). Regerar a mesma semana substitui."""
+    with db.get_conn() as conn:
+        db.save_report(conn, week_start, body_md)
+        return {"week_start": week_start, "saved": True}

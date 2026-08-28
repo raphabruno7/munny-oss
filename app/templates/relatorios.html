@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}relatórios{% endblock %}
+{% block content %}
+<h1>Relatórios semanais</h1>
+{% if reports %}
+<table>
+  <thead><tr><th>Semana de</th><th>Gerado</th></tr></thead>
+  <tbody>
+    {% for r in reports %}
+    <tr>
+      <td><a href="/dashboard/relatorios/{{ r.week_start }}">{{ r.week_start }}</a></td>
+      <td class="muted">{{ r.generated_at[:16].replace("T", " ") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">Ainda não há relatórios. O agente gera um todas as segundas-feiras.</p>
+{% endif %}
+{% endblock %}

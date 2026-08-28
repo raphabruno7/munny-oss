@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}obrigações{% endblock %}
+{% block content %}
+<h1>Obrigações sazonais</h1>
+<p class="muted">Pagamentos que vencem uma vez por ano (IUC, seguro do carro, IRS, inspeção…).
+O relatório semanal diz-te quanto pôr de lado por mês para chegares lá preparado.</p>
+
+<h2>A caminho (próximos 12 meses)</h2>
+{% if upcoming %}
+<table>
+  <thead><tr><th>Obrigação</th><th>Vence</th><th>Valor</th><th>Pôr de lado / mês</th></tr></thead>
+  <tbody>
+    {% for u in upcoming %}
+    <tr>
+      <td>{{ u.nome }}</td>
+      <td>{{ u.vence_em }}{% if u.vence_este_mes %} <span class="flag">vence este mês</span>{% endif %}</td>
+      <td>{{ "%.2f"|format(u.valor) }} €</td>
+      <td><strong>{{ "%.2f"|format(u.por_de_lado_por_mes) }} €</strong> <span class="muted">({{ u.meses_ate_vencer }} meses)</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">Nada registado ainda.</p>
+{% endif %}
+
+<h2>Todas</h2>
+<table>
+  <thead><tr><th>Nome</th><th>Valor</th><th>Mês</th><th>Notas</th><th></th></tr></thead>
+  <tbody>
+    {% for o in obligations %}
+    <tr>
+      <td>{{ o.name }}</td>
+      <td>{{ "%.2f"|format(o.amount) }} €</td>
+      <td>{{ meses[o.due_month] }}</td>
+      <td class="muted">{{ o.notes or "" }}</td>
+      <td>
+        <form method="post" action="/dashboard/obrigacoes/{{ o.id }}/delete"
+              onsubmit="return confirm('Apagar {{ o.name }}?')">
+          <button type="submit" class="danger">apagar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Adicionar</h2>
+<form class="stack" method="post" action="/dashboard/obrigacoes">
+  <label>Nome<input name="name" required placeholder="IUC do carro"></label>
+  <label>Valor (€)<input name="amount" type="number" step="0.01" min="0.01" required></label>
+  <label>Mês em que vence
+    <select name="due_month">
+      {% for m in range(1, 13) %}<option value="{{ m }}">{{ meses[m] }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Notas<input name="notes" placeholder="opcional"></label>
+  <button type="submit">Adicionar</button>
+</form>
+{% endblock %}

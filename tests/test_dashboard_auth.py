@@ -30,6 +30,9 @@ def test_no_cookie_is_rejected_everywhere(client):
     assert client.get("/dashboard").status_code == 303
     assert client.post("/dashboard/transactions/1/category", data={"category": "outros"}).status_code == 303
     assert client.post("/dashboard/recategorize").status_code == 303
+    assert client.get("/dashboard/obrigacoes").status_code == 303
+    assert client.post("/dashboard/obrigacoes", data={"name": "x", "amount": "1", "due_month": "1"}).status_code == 303
+    assert client.get("/dashboard/relatorios").status_code == 303
 
 
 def test_reset_auto_categories_keeps_manual_edits():

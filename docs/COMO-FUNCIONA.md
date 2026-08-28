@@ -14,6 +14,7 @@ Não precisas de saber Python avançado. Precisas de curiosidade.
 4. [A sincronização](#4-a-sincronização)
 5. [Categorizar as transações](#5-categorizar-as-transações)
 6. [Mostrar os dados](#6-mostrar-os-dados)
+6b. [O agente financeiro semanal](#6b-o-agente-financeiro-semanal)
 7. [Segurança: o que é segredo e o que não é](#7-segurança-o-que-é-segredo-e-o-que-não-é)
 8. [Decisões de engenharia e os seus limites](#8-decisões-de-engenharia-e-os-seus-limites)
 
@@ -314,13 +315,57 @@ gastar quota.
 Ficheiro: `app/mcp_server.py`.
 
 **MCP** (*Model Context Protocol*) é uma norma para expor dados e ferramentas a
-assistentes de IA (como o Claude). O munny expõe 5 ferramentas —
+assistentes de IA (como o Claude). O munny expõe ferramentas de leitura —
 `get_balance`, `list_transactions`, `spending_by_category`, `compare_sources`,
-`connection_status` — todas **só de leitura**, todas a partir do SQLite.
+`connection_status`, `weekly_summary`, `recurring_payments`,
+`upcoming_obligations` — todas a partir do SQLite, e **uma** de escrita,
+`save_weekly_report`.
 
 Na prática: podes perguntar a um assistente "quanto gastei em restaurantes em
 julho?" e ele chama a ferramenta e responde. É montado em `/mcp` e protegido
-por *bearer token*.
+por *bearer token* — repara que esse mesmo *token* passou a dar acesso de
+**escrita** (via `save_weekly_report`), não só de leitura.
+
+## 6b. O agente financeiro semanal
+
+Ficheiros: `app/insights.py`, `.claude/skills/weekly-finance-report/`.
+
+Aqui vê-se o MCP a servir o propósito para que foi feito: dar a um **agente**
+uma interface para os teus dados.
+
+### Divisão de trabalho
+
+- **O munny faz as contas** — `app/insights.py` tem funções puras (fáceis de
+  testar, sem rede):
+  - `weekly_summary` — total da última semana completa (segunda a domingo), por
+    categoria, e a comparação com a semana anterior e com a média das 4
+    anteriores;
+  - `detect_recurring` — agrupa transações por comerciante e marca como fixo o
+    que aparece em ≥3 meses com valor dentro de ±20% da mediana (heurística
+    simples; só apanha cadência mensal);
+  - `upcoming_obligations` — para cada despesa sazonal que registaste (IUC,
+    seguro, IRS…), calcula quanto pôr de lado por mês: `valor ÷ meses até
+    vencer`. É o conceito de *sinking fund* — poupar aos poucos para uma despesa
+    grande e previsível.
+- **O agente faz a narrativa** — a *skill* diz-lhe que ferramentas chamar, em
+  que ordem, e a estrutura fixa do relatório. Ele escreve o texto em português,
+  escolhe um conceito de educação financeira da semana e liga-o a um número real
+  ("gastaste 40% em restaurantes — a regra 50/30/20 sugere…").
+
+### Onde corre
+
+Não há serviço novo. É uma **rotina agendada** (cron) que, à segunda de manhã,
+executa a *skill*: lê o MCP, compõe o relatório, chama `save_weekly_report`
+(fica visível em `/dashboard/relatorios`) e envia-o por email. A configuração da
+rotina — quando corre, com que *token*, para que email — vive fora do
+repositório, porque é específica de cada pessoa.
+
+### O limite
+
+Sazonalidade a sério ("dezembro é sempre 2× agosto") precisa de mais de um ano
+de histórico. O munny ainda não o tem, por isso essa análise fica para depois.
+E o agente descreve e ensina — **não** recomenda produtos nem investimentos;
+isso é atividade regulada.
 
 ## 7. Segurança: o que é segredo e o que não é
 

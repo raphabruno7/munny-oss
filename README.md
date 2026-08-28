@@ -107,8 +107,29 @@ uvicorn app.main:app --reload
 |---|---|
 | `GET /connect/enable-banking/start/{aspsp_key}` | Começa a autorização de um banco (redireciona-te para lá) |
 | `GET /dashboard` | O painel (entra com o `MCP_BEARER_TOKEN`) |
+| `GET /dashboard/relatorios` | Os relatórios semanais gerados pelo agente |
+| `GET /dashboard/obrigacoes` | Registar despesas sazonais (IUC, seguro, IRS…) |
 | `GET /status` | Quantos dias faltam até o consentimento caducar |
 | `POST /mcp` | Servidor MCP (header `Authorization: Bearer <MCP_BEARER_TOKEN>`) |
+
+## Agente financeiro semanal
+
+O munny faz as **contas**; um **agente de IA agendado** faz a **narrativa**. Não há
+framework de agente — é uma *skill* (`.claude/skills/weekly-finance-report/`) que
+uma rotina agendada corre todas as segundas:
+
+1. chama as ferramentas MCP `weekly_summary`, `recurring_payments` e
+   `upcoming_obligations` (o munny calcula tudo em `app/insights.py`);
+2. escreve um relatório em português — resumo da semana e comparação com as
+   anteriores, subscrições e gastos fixos, pagamentos sazonais a caminho com
+   quanto pôr de lado por mês (*sinking fund*), e um conceito de educação
+   financeira ligado a um número real;
+3. guarda-o via `save_weekly_report` (aparece em `/dashboard/relatorios`) e
+   envia-o por email.
+
+É um exemplo de como o servidor MCP transforma a base de dados numa **interface
+para um agente**. A configuração da rotina (quando corre, com que credenciais,
+para que email) vive fora do repositório.
 
 ## Deploy
 
@@ -139,10 +160,12 @@ app/
   sync.py            orquestra a sincronização periódica
   categorize.py      regras por palavra-chave + recurso a IA
   categories.yaml    as palavras-chave das regras
+  insights.py        resumo semanal, gastos recorrentes, fundo de reserva
   mcp_server.py      as ferramentas expostas via MCP
   dashboard.py       as páginas do painel
   auth.py            o segredo partilhado e o cookie de sessão
   templates/         as páginas HTML (Jinja2)
+.claude/skills/      a skill do agente financeiro semanal
 docs/                material educativo
 tests/               pytest, sem dependências externas
 ```
@@ -156,6 +179,10 @@ tests/               pytest, sem dependências externas
 - **A categorização por IA custa dinheiro** (chamadas ao Gemini) e pode errar —
   daí o botão para corrigir à mão.
 - **Consentimento caduca aos 90 dias.** `GET /status` avisa; renovar é manual.
+- **Sazonalidade de gastos** ("gastas mais em dezembro") precisa de 12+ meses de
+  histórico — fica para quando houver dados.
+- **O agente não dá conselhos de investimento** — descreve os teus números e
+  ensina conceitos; aconselhamento financeiro personalizado é atividade regulada.
 
 ## Licença
 

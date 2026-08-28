@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>trocado — {% block title %}{% endblock %}</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0;
+           margin: 0 auto; padding: 1.5rem; max-width: 1000px; }
+    a { color: #38bdf8; }
+    h1 { font-size: 1.3rem; }
+    h2 { font-size: 1rem; color: #94a3b8; margin-top: 2rem; }
+    nav { display: flex; gap: 1rem; margin-bottom: 1.5rem; font-size: .9rem; }
+    .card { background: #1e293b; border-radius: 12px; padding: 1rem 1.2rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: .8rem; font-size: .9rem; }
+    th, td { text-align: left; padding: .5rem; border-bottom: 1px solid #1e293b; }
+    input, select, button, textarea { padding: .45rem; border-radius: 8px;
+        border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font: inherit; }
+    button { background: #38bdf8; color: #0f172a; font-weight: 600; border: 0; cursor: pointer; }
+    button.danger { background: transparent; color: #f87171; border: 1px solid #7f1d1d; font-weight: 500; }
+    form.stack { display: flex; flex-wrap: wrap; gap: .6rem; align-items: end; margin-top: 1rem; }
+    form.stack label { font-size: .8rem; color: #94a3b8; display: flex; flex-direction: column; gap: .2rem; }
+    .muted { color: #94a3b8; }
+    .prose { line-height: 1.6; }
+    .prose table { margin: 1rem 0; }
+    .flag { color: #fbbf24; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/dashboard">Painel</a>
+    <a href="/dashboard/relatorios">Relatórios</a>
+    <a href="/dashboard/obrigacoes">Obrigações</a>
+  </nav>
+  {% block content %}{% endblock %}
+</body>
+</html>

@@ -6,11 +6,12 @@ categoria; os filtros de data/banco são um GET form normal.
 from datetime import date
 from pathlib import Path
 
+import markdown as md
 from fastapi import APIRouter, Form, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app import auth, db
+from app import auth, db, insights
 from app.categorize import valid_categories
 from app.config import ENABLE_BANKING_ASPSPS
 from app.sync import _categorize_pending
@@ -119,3 +120,71 @@ def recategorize(request: Request):
         db.reset_auto_categories(conn)
         _categorize_pending(conn)
     return RedirectResponse("/dashboard", status_code=303)
+
+
+_MESES = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+          "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+
+
+@router.get("/obrigacoes", response_class=HTMLResponse)
+def obligations_page(request: Request):
+    guard = _require_session(request)
+    if guard:
+        return guard
+    with db.get_conn() as conn:
+        obligations = [dict(r) for r in db.list_obligations(conn)]
+        upcoming = insights.upcoming_obligations(conn, horizonte_meses=12)
+    return templates.TemplateResponse(
+        request, "obrigacoes.html",
+        {"obligations": obligations, "upcoming": upcoming, "meses": _MESES},
+    )
+
+
+@router.post("/obrigacoes")
+def add_obligation(request: Request, name: str = Form(...), amount: float = Form(...),
+                   due_month: int = Form(...), recurrence: str = Form("annual"),
+                   notes: str = Form("")):
+    guard = _require_session(request)
+    if guard:
+        return guard
+    if not (1 <= due_month <= 12) or amount <= 0 or not name.strip():
+        return Response("dados inválidos", status_code=400)
+    with db.get_conn() as conn:
+        db.add_obligation(conn, name=name.strip(), amount=amount, due_month=due_month,
+                          recurrence=recurrence, notes=notes.strip() or None)
+    return RedirectResponse("/dashboard/obrigacoes", status_code=303)
+
+
+@router.post("/obrigacoes/{obligation_id}/delete")
+def remove_obligation(request: Request, obligation_id: int):
+    guard = _require_session(request)
+    if guard:
+        return guard
+    with db.get_conn() as conn:
+        db.delete_obligation(conn, obligation_id)
+    return RedirectResponse("/dashboard/obrigacoes", status_code=303)
+
+
+@router.get("/relatorios", response_class=HTMLResponse)
+def reports_page(request: Request):
+    guard = _require_session(request)
+    if guard:
+        return guard
+    with db.get_conn() as conn:
+        reports = [dict(r) for r in db.list_reports(conn)]
+    return templates.TemplateResponse(request, "relatorios.html", {"reports": reports})
+
+
+@router.get("/relatorios/{week_start}", response_class=HTMLResponse)
+def report_page(request: Request, week_start: str):
+    guard = _require_session(request)
+    if guard:
+        return guard
+    with db.get_conn() as conn:
+        report = db.get_report(conn, week_start)
+    if report is None:
+        return Response("relatório não encontrado", status_code=404)
+    body_html = md.markdown(report["body_md"], extensions=["tables", "sane_lists"])
+    return templates.TemplateResponse(
+        request, "relatorio.html", {"week_start": week_start, "body_html": body_html},
+    )

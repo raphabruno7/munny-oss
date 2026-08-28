@@ -49,6 +49,23 @@ CREATE TABLE IF NOT EXISTS transactions (
     raw_json             TEXT,
     UNIQUE (source, external_id)
 );
+
+CREATE TABLE IF NOT EXISTS obligations (
+    id          INTEGER PRIMARY KEY,
+    name        TEXT NOT NULL,
+    amount      REAL NOT NULL,
+    due_month   INTEGER NOT NULL,
+    recurrence  TEXT NOT NULL DEFAULT 'annual',
+    notes       TEXT,
+    created_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+    id            INTEGER PRIMARY KEY,
+    week_start    TEXT NOT NULL UNIQUE,
+    generated_at  TEXT NOT NULL,
+    body_md       TEXT NOT NULL
+);
 """
 
 # Migrações idempotentes para BDs criadas antes de uma coluna existir (SQLite não
@@ -259,6 +276,43 @@ def check_and_increment_unattended_quota(conn, source: str, aspsp_key: str, dail
         (f"{today}:{count + 1}", source, aspsp_key),
     )
     return True
+
+
+def list_obligations(conn) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM obligations ORDER BY due_month, name").fetchall()
+
+
+def add_obligation(conn, *, name: str, amount: float, due_month: int,
+                   recurrence: str = "annual", notes: str | None = None) -> int:
+    cur = conn.execute(
+        "INSERT INTO obligations (name, amount, due_month, recurrence, notes, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (name, amount, due_month, recurrence, notes, _now_iso()),
+    )
+    return cur.lastrowid
+
+
+def delete_obligation(conn, obligation_id: int) -> None:
+    conn.execute("DELETE FROM obligations WHERE id = ?", (obligation_id,))
+
+
+def save_report(conn, week_start: str, body_md: str) -> None:
+    conn.execute(
+        "INSERT INTO reports (week_start, generated_at, body_md) VALUES (?, ?, ?) "
+        "ON CONFLICT (week_start) DO UPDATE SET generated_at = excluded.generated_at, "
+        "body_md = excluded.body_md",
+        (week_start, _now_iso(), body_md),
+    )
+
+
+def list_reports(conn) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT week_start, generated_at FROM reports ORDER BY week_start DESC"
+    ).fetchall()
+
+
+def get_report(conn, week_start: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM reports WHERE week_start = ?", (week_start,)).fetchone()
 
 
 def _now_iso() -> str:

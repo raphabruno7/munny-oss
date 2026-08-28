@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}relatório {{ week_start }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="/dashboard/relatorios">← todos os relatórios</a></p>
+<div class="prose">{{ body_html|safe }}</div>
+{% endblock %}

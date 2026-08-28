@@ -1,5 +1,6 @@
 fastapi
 jinja2
+markdown
 python-multipart
 uvicorn[standard]
 httpx
