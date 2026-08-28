@@ -1,0 +1,5 @@
+restaurantes: [restaurante, cafe, pastelaria, "uber eats", glovo, "just eat", "bolt food", mcdonald, kfc, telepizza]
+transporte: [uber, bolt, cp, metro, carris, galp, repsol, bp, "via verde", parquimetro, "e-redes", lime, tier]
+compras: [continente, "pingo doce", lidl, aldi, auchan, mercadona, amazon, worten, fnac, ikea, zara, "el corte ingles", leroy]
+subscricoes: [netflix, spotify, "amazon prime", "disney+", hbo, icloud, google, dropbox, github, notion, meo, nos, vodafone, fitness, ginasio]
+saude: [farmacia, clinica, hospital, dentista, "wells", medico, analises, optica, multicare]

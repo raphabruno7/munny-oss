@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>trocado — dashboard</title>
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0;
+           margin: 0; padding: 1.5rem; max-width: 1000px; margin: 0 auto; }
+    h1 { font-size: 1.3rem; }
+    h2 { font-size: 1rem; color: #94a3b8; margin-top: 2rem; }
+    .cards { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .card { background: #1e293b; border-radius: 12px; padding: 1rem 1.2rem; min-width: 160px; }
+    .card .name { color: #94a3b8; font-size: .8rem; }
+    .card .amount { font-size: 1.4rem; font-weight: 700; margin-top: .3rem; }
+    form.filters { display: flex; flex-wrap: wrap; gap: .6rem; align-items: end; margin-top: 1rem; }
+    form.filters label { font-size: .8rem; color: #94a3b8; display: flex; flex-direction: column; gap: .2rem; }
+    input, select, button { padding: .45rem; border-radius: 8px; border: 1px solid #334155;
+                            background: #0f172a; color: #e2e8f0; }
+    button { background: #38bdf8; color: #0f172a; font-weight: 600; border: 0; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: .8rem; font-size: .9rem; }
+    th, td { text-align: left; padding: .5rem; border-bottom: 1px solid #1e293b; }
+    td.neg { color: #f87171; }
+    td.pos { color: #4ade80; }
+    .chart-wrap { max-width: 340px; margin-top: .8rem; }
+    .overflow { overflow-x: auto; }
+    .cat-meta { display: flex; gap: .4rem; align-items: center; margin-top: .25rem; font-size: .72rem; }
+    .badge { padding: .05rem .4rem; border-radius: 6px; font-weight: 600; text-transform: uppercase;
+             letter-spacing: .02em; }
+    .badge-rule { background: #164e63; color: #a5f3fc; }
+    .badge-llm { background: #4c1d95; color: #ddd6fe; }
+    .badge-manual { background: #713f12; color: #fde68a; }
+    .why { color: #94a3b8; }
+    button.ghost { background: transparent; color: #94a3b8; border: 1px solid #334155;
+                   font-size: .8rem; font-weight: 500; margin-left: .6rem; }
+  </style>
+</head>
+<body>
+  <h1>trocado</h1>
+
+  <div class="cards">
+    {% for a in accounts %}
+    <div class="card">
+      <div class="name">{{ a.display_name or a.aspsp_key }}</div>
+      <div class="amount">
+        {{ "%.2f"|format(a.balance_amount or 0) }} {{ a.currency }}
+      </div>
+      <div class="name">{{ a.balance_updated_at or "sem saldo" }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <form class="filters" method="get" action="/dashboard">
+    <label>De<input type="date" name="from" value="{{ date_from }}"></label>
+    <label>Até<input type="date" name="to" value="{{ date_to }}"></label>
+    <label>Banco
+      <select name="aspsp">
+        <option value="">Todos</option>
+        {% for key, meta in aspsps.items() %}
+        <option value="{{ key }}" {% if key == aspsp %}selected{% endif %}>{{ meta.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Filtrar</button>
+  </form>
+
+  <h2>Gastos por categoria</h2>
+  {% if spending %}
+  <div class="chart-wrap"><canvas id="catChart"></canvas></div>
+  {% else %}
+  <p>Sem gastos no período.</p>
+  {% endif %}
+
+  <h2>
+    Transações ({{ transactions|length }})
+    <form method="post" action="/dashboard/recategorize" style="display:inline"
+          onsubmit="return confirm('Voltar a categorizar tudo o que não foi editado à mão?')">
+      <button type="submit" class="ghost">Re-categorizar tudo</button>
+    </form>
+  </h2>
+  <div class="overflow">
+  <table>
+    <thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Banco</th><th>Categoria</th></tr></thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr>
+        <td>{{ t.booking_date }}</td>
+        <td>{{ t.description }}</td>
+        <td class="{{ 'neg' if t.amount < 0 else 'pos' }}">{{ "%.2f"|format(t.amount) }} {{ t.currency }}</td>
+        <td>{{ t.aspsp_key }}</td>
+        {% set txn = t %}{% include "_category_cell.html" with context %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if spending %}
+  <script>
+    const spending = {{ spending|tojson }};
+    new Chart(document.getElementById("catChart"), {
+      type: "doughnut",
+      data: {
+        labels: Object.keys(spending),
+        datasets: [{ data: Object.values(spending) }]
+      },
+      options: { plugins: { legend: { position: "bottom", labels: { color: "#e2e8f0" } } } }
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

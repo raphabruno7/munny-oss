@@ -1,0 +1,12 @@
+fastapi
+jinja2
+python-multipart
+uvicorn[standard]
+httpx
+mcp
+cryptography
+pyjwt
+pyyaml
+google-genai
+apscheduler
+pytest

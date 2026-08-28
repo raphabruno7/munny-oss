@@ -1,0 +1,3 @@
+trocado.SEU_DOMINIO.com {
+    reverse_proxy trocado:8000
+}

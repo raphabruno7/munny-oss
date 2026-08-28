@@ -1,0 +1,30 @@
+services:
+  trocado:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DB_PATH=/data/trocado.db
+      - PORT=8000
+    volumes:
+      - trocado-data:/data
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - trocado
+
+volumes:
+  trocado-data:
+  caddy-data:
+  caddy-config:

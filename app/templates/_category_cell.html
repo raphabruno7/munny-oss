@@ -1,0 +1,20 @@
+{% set labels = {"rule": "regra", "llm": "IA", "manual": "manual"} %}
+<td class="cat-cell">
+  <select name="category"
+          hx-post="/dashboard/transactions/{{ txn.id }}/category"
+          hx-target="closest td"
+          hx-swap="outerHTML">
+    {% for c in categories %}
+    <option value="{{ c }}" {% if c == txn.category %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+    {% if txn.category and txn.category not in categories %}
+    <option value="" selected>{{ txn.category }}</option>
+    {% endif %}
+  </select>
+  <div class="cat-meta">
+    {% if txn.category_source %}
+    <span class="badge badge-{{ txn.category_source }}">{{ labels.get(txn.category_source, txn.category_source) }}</span>
+    {% endif %}
+    {% if txn.category_rationale %}<span class="why">{{ txn.category_rationale }}</span>{% endif %}
+  </div>
+</td>
