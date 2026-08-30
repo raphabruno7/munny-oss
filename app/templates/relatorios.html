@@ -2,6 +2,10 @@
 {% block title %}relatórios{% endblock %}
 {% block content %}
 <h1>Relatórios semanais</h1>
+<form method="post" action="/dashboard/relatorios/gerar"
+      onsubmit="return confirm('Gerar o relatório da última semana agora? (chama o Gemini e envia email)')">
+  <button type="submit">Gerar agora</button>
+</form>
 {% if reports %}
 <table>
   <thead><tr><th>Semana de</th><th>Gerado</th></tr></thead>

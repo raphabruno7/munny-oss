@@ -11,7 +11,7 @@ from fastapi import APIRouter, Form, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app import auth, db, insights
+from app import auth, db, insights, report
 from app.categorize import valid_categories
 from app.config import ENABLE_BANKING_ASPSPS
 from app.sync import _categorize_pending
@@ -173,6 +173,16 @@ def reports_page(request: Request):
     with db.get_conn() as conn:
         reports = [dict(r) for r in db.list_reports(conn)]
     return templates.TemplateResponse(request, "relatorios.html", {"reports": reports})
+
+
+@router.post("/relatorios/gerar")
+def generate_report_now(request: Request):
+    guard = _require_session(request)
+    if guard:
+        return guard
+    with db.get_conn() as conn:
+        week_start = report.generate_weekly_report(conn)
+    return RedirectResponse(f"/dashboard/relatorios/{week_start}", status_code=303)
 
 
 @router.get("/relatorios/{week_start}", response_class=HTMLResponse)

@@ -17,6 +17,12 @@ MCP_BEARER_TOKEN = os.environ.get("MCP_BEARER_TOKEN", "")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
+# Relatório financeiro semanal por email (Resend). Sem RESEND_API_KEY, o job só
+# grava o relatório no dashboard e não envia email.
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+REPORT_EMAIL_FROM = os.environ.get("REPORT_EMAIL_FROM", "munny@example.com")
+REPORT_EMAIL_TO = os.environ.get("REPORT_EMAIL_TO", "")
+
 CONSENT_EXPIRING_SOON_DAYS = 7
 UNATTENDED_SYNC_DAILY_LIMIT = 4
 

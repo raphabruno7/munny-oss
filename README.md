@@ -112,24 +112,25 @@ uvicorn app.main:app --reload
 | `GET /status` | Quantos dias faltam até o consentimento caducar |
 | `POST /mcp` | Servidor MCP (header `Authorization: Bearer <MCP_BEARER_TOKEN>`) |
 
-## Agente financeiro semanal
+## Relatório financeiro semanal
 
-O munny faz as **contas**; um **agente de IA agendado** faz a **narrativa**. Não há
-framework de agente — é uma *skill* (`.claude/skills/weekly-finance-report/`) que
-uma rotina agendada corre todas as segundas:
+Todas as segundas de manhã (job no APScheduler, `app/report.py`), o munny:
 
-1. chama as ferramentas MCP `weekly_summary`, `recurring_payments` e
-   `upcoming_obligations` (o munny calcula tudo em `app/insights.py`);
-2. escreve um relatório em português — resumo da semana e comparação com as
-   anteriores, subscrições e gastos fixos, pagamentos sazonais a caminho com
-   quanto pôr de lado por mês (*sinking fund*), e um conceito de educação
-   financeira ligado a um número real;
-3. guarda-o via `save_weekly_report` (aparece em `/dashboard/relatorios`) e
-   envia-o por email.
+1. junta os números — `app/insights.py` calcula o resumo da semana e a comparação
+   com as anteriores, os pagamentos recorrentes, e o *sinking fund* de cada
+   obrigação sazonal (quanto pôr de lado por mês);
+2. pede ao Gemini para os **narrar** em português, numa estrutura fixa, com um
+   conceito de educação financeira por semana (`CONCEITOS`, rotativo) — descreve
+   números e ensina, **não** dá conselhos de investimento;
+3. grava o relatório (`/dashboard/relatorios`) e, se `RESEND_API_KEY` estiver
+   definida, envia-o por email ([Resend](https://resend.com/)); senão, só grava.
 
-É um exemplo de como o servidor MCP transforma a base de dados numa **interface
-para um agente**. A configuração da rotina (quando corre, com que credenciais,
-para que email) vive fora do repositório.
+`.claude/skills/weekly-finance-report/` tem a mesma estrutura para gerar o
+relatório à mão através de um assistente de IA + as ferramentas MCP — exemplo de
+como o servidor MCP transforma a base de dados numa interface para um agente.
+
+Variáveis: `RESEND_API_KEY`, `REPORT_EMAIL_FROM`, `REPORT_EMAIL_TO` (todas
+opcionais — sem elas o relatório aparece só no dashboard).
 
 ## Deploy
 
@@ -161,6 +162,7 @@ app/
   categorize.py      regras por palavra-chave + recurso a IA
   categories.yaml    as palavras-chave das regras
   insights.py        resumo semanal, gastos recorrentes, fundo de reserva
+  report.py          job semanal: Gemini narra os insights + email (Resend)
   mcp_server.py      as ferramentas expostas via MCP
   dashboard.py       as páginas do painel
   auth.py            o segredo partilhado e o cookie de sessão

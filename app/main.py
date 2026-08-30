@@ -7,8 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from app import db, sync
-from app import auth
+from app import auth, db, report, sync
 from app.config import CONSENT_EXPIRING_SOON_DAYS, ENABLE_BANKING_ASPSPS, ENABLE_BANKING_REDIRECT_URL
 from app.dashboard import router as dashboard_router
 from app.mcp_server import mcp
@@ -26,12 +25,22 @@ def _run_sync_job() -> None:
         logger.exception("sync_all falhou")
 
 
+def _run_weekly_report_job() -> None:
+    try:
+        with db.get_conn() as conn:
+            report.generate_weekly_report(conn)
+    except Exception:
+        logger.exception("relatório semanal falhou")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init_db()
     # ponytail: scheduler in-process, só funciona com 1 réplica; migrar para Railway Cron se escalar
     scheduler = BackgroundScheduler()
     scheduler.add_job(_run_sync_job, "interval", hours=SYNC_INTERVAL_HOURS, next_run_time=datetime.now())
+    # Relatório semanal: segunda 07:00 UTC (~08:00 Lisboa no verão, 07:00 no inverno)
+    scheduler.add_job(_run_weekly_report_job, "cron", day_of_week="mon", hour=7)
     scheduler.start()
     async with mcp.session_manager.run():
         yield

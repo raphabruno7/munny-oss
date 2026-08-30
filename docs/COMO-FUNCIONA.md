@@ -14,7 +14,7 @@ Não precisas de saber Python avançado. Precisas de curiosidade.
 4. [A sincronização](#4-a-sincronização)
 5. [Categorizar as transações](#5-categorizar-as-transações)
 6. [Mostrar os dados](#6-mostrar-os-dados)
-6b. [O agente financeiro semanal](#6b-o-agente-financeiro-semanal)
+6b. [O relatório financeiro semanal](#6b-o-relatório-financeiro-semanal)
 7. [Segurança: o que é segredo e o que não é](#7-segurança-o-que-é-segredo-e-o-que-não-é)
 8. [Decisões de engenharia e os seus limites](#8-decisões-de-engenharia-e-os-seus-limites)
 
@@ -326,12 +326,10 @@ julho?" e ele chama a ferramenta e responde. É montado em `/mcp` e protegido
 por *bearer token* — repara que esse mesmo *token* passou a dar acesso de
 **escrita** (via `save_weekly_report`), não só de leitura.
 
-## 6b. O agente financeiro semanal
+## 6b. O relatório financeiro semanal
 
-Ficheiros: `app/insights.py`, `.claude/skills/weekly-finance-report/`.
-
-Aqui vê-se o MCP a servir o propósito para que foi feito: dar a um **agente**
-uma interface para os teus dados.
+Ficheiros: `app/insights.py`, `app/report.py`,
+`.claude/skills/weekly-finance-report/`.
 
 ### Divisão de trabalho
 
@@ -347,18 +345,23 @@ uma interface para os teus dados.
     seguro, IRS…), calcula quanto pôr de lado por mês: `valor ÷ meses até
     vencer`. É o conceito de *sinking fund* — poupar aos poucos para uma despesa
     grande e previsível.
-- **O agente faz a narrativa** — a *skill* diz-lhe que ferramentas chamar, em
-  que ordem, e a estrutura fixa do relatório. Ele escreve o texto em português,
-  escolhe um conceito de educação financeira da semana e liga-o a um número real
+- **O LLM faz a narrativa** — `app/report.py` monta um *prompt* com esses números
+  (em JSON) e a estrutura fixa do relatório, e pede ao Gemini o texto em
+  português. Escolhe um conceito de educação financeira da semana
+  (lista `CONCEITOS`, rotativa pela semana do ano) e liga-o a um número real
   ("gastaste 40% em restaurantes — a regra 50/30/20 sugere…").
 
 ### Onde corre
 
-Não há serviço novo. É uma **rotina agendada** (cron) que, à segunda de manhã,
-executa a *skill*: lê o MCP, compõe o relatório, chama `save_weekly_report`
-(fica visível em `/dashboard/relatorios`) e envia-o por email. A configuração da
-rotina — quando corre, com que *token*, para que email — vive fora do
-repositório, porque é específica de cada pessoa.
+Não há serviço novo. É **mais um job no mesmo agendador** que já faz a
+sincronização de 6 em 6 horas (`app/main.py`): à segunda às 07:00 UTC,
+`app/report.py` gera o relatório, grava-o (`/dashboard/relatorios`) e — se
+`RESEND_API_KEY` estiver definida — envia-o por email pela API do
+[Resend](https://resend.com/) (um `httpx.post`, sem SDK).
+
+A *skill* `weekly-finance-report` tem a mesma estrutura para o caso de quereres
+gerar o relatório à mão através de um assistente de IA (que chama as ferramentas
+MCP em vez de `app/insights.py` diretamente) — é o mesmo trabalho, feito de fora.
 
 ### O limite
 
